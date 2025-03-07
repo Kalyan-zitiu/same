@@ -1,0 +1,432 @@
+spiderpool:
+    global:
+      imageRegistryOverride: ghcr.m.daocloud.io
+      nameOverride: ''
+      clusterDnsDomain: cluster.local
+      commonAnnotations: {}
+      commonLabels: {}
+      cniBinHostPath: /opt/cni/bin
+      cniConfHostPath: /etc/cni/net.d
+      ipamUNIXSocketHostPath: /var/run/spidernet/spiderpool.sock
+      configName: spiderpool-conf
+      ciliumConfigMap: kube-system/cilium-config
+    ipam:
+      enableIPv4: true
+      enableIPv6: false
+      enableStatefulSet: true
+      enableKubevirtStaticIP: true
+      enableIPConflictDetection: true
+      enableGatewayDetection: true
+      spiderSubnet:
+        enable: true
+        autoPool:
+          enable: true
+          defaultRedundantIPNumber: 1
+      gc:
+        enabled: true
+        gcAll:
+          intervalInSecond: 600
+        statelessPod:
+          zombieOnReadyNode: true
+          zombieOnNotReadyNode: true
+        gcDeletingTimeOutPodDelay: 0
+    grafanaDashboard:
+      install: false
+      namespace: ''
+      annotations: {}
+      labels:
+        operator.insight.io/managed-by: insight
+    coordinator:
+      enabled: true
+      name: default
+      mode: auto
+      podCIDRType: auto
+      detectGateway: false
+      detectIPConflict: false
+      tunePodRoutes: true
+      hijackCIDR:
+        - 169.254.0.0/16
+      vethLinkAddress: ''
+    rdma:
+      rdmaSharedDevicePlugin:
+        install: false
+        name: spiderpool-rdma-shared-device-plugin
+        image:
+          registry: ghcr.m.daocloud.io
+          repository: mellanox/k8s-rdma-shared-dev-plugin
+          pullPolicy: IfNotPresent
+          digest: ''
+          tag: v1.5.1
+          imagePullSecrets: []
+        updateStrategy:
+          rollingUpdate:
+            maxUnavailable: 2
+          type: RollingUpdate
+        tolerations:
+          - operator: Exists
+        podAnnotations: {}
+        podLabels: {}
+        resources:
+          limits:
+            cpu: 300m
+            memory: 300Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+        deviceConfig:
+          periodicUpdateInterval: 300
+          configList: []
+          resourceName: hca_shared_devices
+          vendors: 15b3
+          deviceIDs: '1017'
+    multus:
+      enableMultusConfig: true
+      multusCNI:
+        install: true
+        uninstall: true
+        name: spiderpool-multus
+        image:
+          registry: ghcr.m.daocloud.io
+          repository: k8snetworkplumbingwg/multus-cni
+          pullPolicy: IfNotPresent
+          digest: ''
+          tag: v4.1.4
+          imagePullSecrets: []
+        defaultCniCRName: ''
+        securityContext:
+          privileged: true
+        extraEnv: []
+        extraVolumes: []
+        extraVolumeMounts: []
+        log:
+          logLevel: debug
+          logFile: /var/log/multus.log
+    plugins:
+      installCNI: false
+      installRdmaCNI: true
+      installOvsCNI: true
+      installSriovCNI: true
+      installibSriovCNI: true
+      installIpoibCNI: true
+      image:
+        registry: ghcr.m.daocloud.io
+        repository: spidernet-io/spiderpool/spiderpool-plugins
+        pullPolicy: IfNotPresent
+        digest: ''
+        tag: 27c4f118b1cec3773f2679b772e7583fc77e5686
+        imagePullSecrets: []
+    clusterDefaultPool:
+      installIPv4IPPool: true
+      installIPv6IPPool: false
+      ipv4IPPoolName: default-v4-ippool
+      ipv6IPPoolName: default-v6-ippool
+      ipv4SubnetName: default-v4-subnet
+      ipv6SubnetName: default-v6-subnet
+      ipv4Subnet: 192.168.0.0/16
+      ipv6Subnet: fd00::/112
+      ipv4IPRanges:
+        - 192.168.0.10-192.168.0.100
+      ipv6IPRanges:
+        - fd00::10-fd00::100
+      ipv4Gateway: 192.168.0.1
+      ipv6Gateway: fd00::1
+    spiderpoolAgent:
+      name: spiderpool-agent
+      binName: /usr/bin/spiderpool-agent
+      image:
+        registry: ghcr.m.daocloud.io
+        repository: spidernet-io/spiderpool/spiderpool-agent
+        pullPolicy: IfNotPresent
+        digest: ''
+        tag: v1.0.1
+        imagePullSecrets: []
+      nodeSelector:
+        kubernetes.io/os: linux
+      serviceAccount:
+        create: true
+        annotations: {}
+      updateStrategy:
+        rollingUpdate:
+          maxUnavailable: 2
+        type: RollingUpdate
+      service:
+        annotations: {}
+        type: ClusterIP
+      tolerations:
+        - operator: Exists
+      priorityClassName: system-node-critical
+      affinity: {}
+      extraArgs: []
+      extraEnv: []
+      extraVolumes: []
+      extraVolumeMounts: []
+      podAnnotations: {}
+      podLabels: {}
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 1024Mi
+        requests:
+          cpu: 10m
+          memory: 32Mi
+      tuneSysctlConfig: true
+      securityContext: {}
+      httpPort: 5710
+      healthChecking:
+        startupProbe:
+          failureThreshold: 60
+          periodSeconds: 2
+        livenessProbe:
+          failureThreshold: 6
+          periodSeconds: 10
+        readinessProbe:
+          failureThreshold: 3
+          periodSeconds: 10
+      prometheus:
+        enabled: false
+        enabledRdmaMetric: false
+        enabledDebugMetric: false
+        port: 5711
+        serviceMonitor:
+          install: false
+          namespace: ''
+          annotations: {}
+          labels:
+            operator.insight.io/managed-by: insight
+          interval: 10s
+        prometheusRule:
+          install: false
+          namespace: ''
+          annotations: {}
+          labels: {}
+          enableWarningIPAMAllocationFailure: true
+          enableWarningIPAMAllocationOverTime: true
+          enableWarningIPAMHighAllocationDurations: true
+          enableWarningIPAMReleaseFailure: true
+          enableWarningIPAMReleaseOverTime: true
+      debug:
+        logLevel: info
+        gopsPort: 5712
+    spiderpoolController:
+      name: spiderpool-controller
+      replicas: 1
+      binName: /usr/bin/spiderpool-controller
+      hostnetwork: true
+      image:
+        registry: ghcr.m.daocloud.io
+        repository: spidernet-io/spiderpool/spiderpool-controller
+        pullPolicy: IfNotPresent
+        digest: ''
+        tag: v1.0.1
+        imagePullSecrets: []
+      nodeSelector:
+        kubernetes.io/os: linux
+      serviceAccount:
+        create: true
+        annotations: {}
+      service:
+        annotations: {}
+        type: ClusterIP
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+      priorityClassName: system-node-critical
+      affinity: {}
+      extraArgs: []
+      extraEnv: []
+      extraVolumes: []
+      extraVolumeMounts: []
+      podAnnotations: {}
+      podLabels: {}
+      securityContext: {}
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1024Mi
+        requests:
+          cpu: 10m
+          memory: 64Mi
+      podDisruptionBudget:
+        enabled: false
+        minAvailable: 1
+      httpPort: 5720
+      healthChecking:
+        startupProbe:
+          failureThreshold: 30
+          periodSeconds: 2
+        livenessProbe:
+          failureThreshold: 6
+          periodSeconds: 10
+        readinessProbe:
+          failureThreshold: 3
+          periodSeconds: 10
+      webhookPort: 5722
+      podResourceInject:
+        enabled: true
+        namespacesExclude:
+          - insight-system
+          - mcamel-system
+          - amamba-system
+          - argocd
+          - baize-system
+          - ghippo-system
+          - gpu-operator
+          - dowl-system
+          - hwameistor
+          - insight-system
+          - kairship-system
+          - kangaroo-system
+          - kant-system
+          - kcollie-system
+          - kcoral-system
+          - kolm-system
+          - kpanda-system
+          - kubean-system
+          - local-path-storage
+          - mspider-system
+          - nvidia-gpu-operator
+          - skoala-system
+          - spidernet-system
+          - virtnest-system
+          - ipavo-system
+          - kube-system
+          - spiderpool
+          - metallb-system
+          - istio-system
+        namespacesInclude: []
+      prometheus:
+        enabled: false
+        enabledDebugMetric: false
+        port: 5721
+        serviceMonitor:
+          install: false
+          namespace: ''
+          annotations: {}
+          labels: {}
+          interval: 10s
+        prometheusRule:
+          install: false
+          namespace: ''
+          annotations: {}
+          labels: {}
+          enableWarningIPGCFailureCounts: true
+      debug:
+        logLevel: info
+        gopsPort: 5724
+      tls:
+        method: auto
+        secretName: spiderpool-controller-server-certs
+        certmanager:
+          certValidityDuration: 36500
+          issuerName: ''
+          extraDnsNames: []
+          extraIPAddresses: []
+        provided:
+          tlsCert: ''
+          tlsKey: ''
+          tlsCa: ''
+        auto:
+          caExpiration: '73000'
+          certExpiration: '73000'
+          extraIpAddresses: []
+          extraDnsNames: []
+      cleanup:
+        enable: true
+    spiderpoolInit:
+      name: spiderpool-init
+      binName: /usr/bin/spiderpool-init
+      image:
+        registry: ghcr.m.daocloud.io
+        repository: spidernet-io/spiderpool/spiderpool-controller
+        pullPolicy: IfNotPresent
+        digest: ''
+        tag: v1.0.1
+        imagePullSecrets: []
+      extraArgs: []
+      extraEnv: []
+      securityContext: {}
+      serviceAccount:
+        annotations: {}
+    sriov:
+      install: false
+      name: spiderpool-sriov-operator
+      tolerations:
+        - operator: Exists
+      nodeSelector:
+        kubernetes.io/os: linux
+      affinity: {}
+      hostnetwork: true
+      replicas: 1
+      resourcePrefix: spidernet.io
+      priorityClassName: system-node-critical
+      resources:
+        limits:
+          cpu: 300m
+          memory: 300Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+      operatorConfig:
+        enableInjector: false
+        enableOperatorWebhook: true
+        configDaemonNodeSelector:
+          kubernetes.io/os: linux
+        logLevel: 2
+        disableDrain: true
+        configurationMode: daemon
+      image:
+        registry: ghcr.io
+        pullPolicy: IfNotPresent
+        imagePullSecrets: []
+        operator:
+          repository: spidernet-io/sriov-network-operator
+          tag: v1.3.0
+        sriovConfigDaemon:
+          repository: spidernet-io/sriov-network-operator-config-daemon
+          tag: v1.3.0
+        sriovDevicePlugin:
+          repository: k8snetworkplumbingwg/sriov-network-device-plugin
+          tag: v3.7.0
+        resourcesInjector:
+          repository: k8snetworkplumbingwg/network-resources-injector
+          tag: v1.5
+        webhook:
+          repository: k8snetworkplumbingwg/sriov-network-operator-webhook
+          tag: v1.3.0
+      webhooktls:
+        method: auto
+        secretName: sriov-operator-webhook
+        serviceName: operator-webhook-service
+        certmanager:
+          certValidityDuration: 365
+          issuerName: ''
+          extraDnsNames: []
+          extraIPAddresses: []
+        provided:
+          tlsCert: ''
+          tlsKey: ''
+          tlsCa: ''
+        auto:
+          caExpiration: '73000'
+          certExpiration: '73000'
+          extraIpAddresses: []
+          extraDnsNames: []
+      injectortls:
+        method: auto
+        secretName: sriov-injector
+        serviceName: network-resources-injector-service
+        certmanager:
+          certValidityDuration: 36500
+          issuerName: ''
+          extraDnsNames: []
+          extraIPAddresses: []
+        provided:
+          tlsCert: ''
+          tlsKey: ''
+          tlsCa: ''
+        auto:
+          caExpiration: '73000'
+          certExpiration: '73000'
+          extraIpAddresses: []
+          extraDnsNames: []
+  
